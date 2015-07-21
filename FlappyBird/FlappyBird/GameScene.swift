@@ -18,6 +18,8 @@ enum Layer:Int {
     }
 }
 
+// Step 20: Collision masks
+
 // Helper function
 func randomFloatRange(min:CGFloat, max:CGFloat) -> CGFloat {
     return CGFloat(Float(arc4random()) / Float(UINT32_MAX)) * (max - min) + min;
@@ -51,10 +53,23 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
     var player:SKSpriteNode?
     
     // Step 15: Create obstacle variables
+    // Gameplay - Obstacle positioning
+    let kGapMultiplier:CGFloat = 3.5
+    let kBottomObstacleMinFraction:CGFloat = 0.1
+    let kBottomObstacleMaxFraction:CGFloat = 0.6
+    
+    // Gameplay - Obstacle spawn timing
+    let kFirstSpawnDelay:Double = 1.5
+    let kSpawnDelay:Double = 1.5
+    
+    // Step 19: Physics variables
     
     
     override init(size: CGSize) {        
         super.init(size:size)
+        
+        // Step 21: Physics world
+        
         
         // Step 5: Add the root note to the scene
         self.addChild(worldNode)
@@ -64,6 +79,7 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
         setupForeground()
         setupPlayer()
         
+        startSpawning()
     }
 
     required init(coder aDecoder: NSCoder) {
@@ -81,6 +97,8 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
         // Step 9: Move the foreground to the correct position
         playableStart = self.size.height - background.size.height
         playableHeight = background.size.height
+        
+        // Step 23: Add ground physics
     }
     
     // Step 7: Setup foreground and midground
@@ -147,6 +165,8 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
         player!.zPosition = Layer.LayerPlayer.floatValue()
         worldNode.addChild(player!)
         
+        // Step 22: Add player physics
+        
         setupPlayerAnimations()
     }
     
@@ -166,13 +186,76 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
     }
     
     // Step 16: Create single obstacle
+    func createObstacle() -> SKSpriteNode {
+        let obstacle:SKSpriteNode = SKSpriteNode(imageNamed: "Wall")
+        obstacle.zPosition = Layer.LayerObstacle.floatValue()
+        
+        // Step 24: Add obstacle phyics
+        
+        
+        return obstacle
+    }
     
+    // Step 25: Add begin contact
     
     // Step 17: Spawn complete obstacle
-    
+    func spawnObstacle() {
+        let bottomObstacle:SKSpriteNode = createObstacle()
+        bottomObstacle.name = "BottomObstacle"
+        let startX:CGFloat = self.size.width + bottomObstacle.size.width
+        let obstacleHalfHeight:CGFloat = bottomObstacle.size.height / 2.0
+        
+        // Create and position bottom obstacle
+        let bottomObstacleMin:CGFloat = (playableStart - obstacleHalfHeight) + playableHeight * kBottomObstacleMinFraction
+        let bottomObstacleMax:CGFloat = (playableStart - obstacleHalfHeight) + playableHeight * kBottomObstacleMaxFraction
+        bottomObstacle.position = CGPoint(x: startX, y: randomFloatRange(bottomObstacleMin, max: bottomObstacleMax))
+        
+        // Create and position top obstacle
+        let topObstacle:SKSpriteNode = createObstacle()
+        topObstacle.name = "TopObstacle"
+        topObstacle.zRotation = degreesToRadians(180)
+        let topY:CGFloat = bottomObstacle.position.y + obstacleHalfHeight + topObstacle.size.height / 2.0 + (player!.size.height * kGapMultiplier)
+        topObstacle.position = CGPoint(x: startX, y: topY)
+        
+        // Add obstacle to the world
+        worldNode.addChild(bottomObstacle)
+        worldNode.addChild(topObstacle)
+        
+        let moveX:CGFloat = self.size.width + topObstacle.size.width * 2.0
+        let moveDuration:NSTimeInterval = NSTimeInterval(moveX / kForegroundSpeed)
+        let moveAction:SKAction = SKAction.sequence([
+            SKAction.moveByX(-moveX, y: 0, duration: moveDuration),
+            SKAction.removeFromParent()
+            ])
+        
+        topObstacle.runAction(moveAction)
+        bottomObstacle.runAction(moveAction)
+    }
     
     // Step 18: Handle spawning intervals
+    func startSpawning() {
+        let firstDelay:SKAction = SKAction.waitForDuration(kFirstSpawnDelay)
+        let spawn:SKAction = SKAction.runBlock({self.spawnObstacle()})
+        let everyDelay:SKAction = SKAction.waitForDuration(kSpawnDelay)
+        let spawnSequence:SKAction = SKAction.sequence([everyDelay, spawn])
+        let foreverSpawn:SKAction = SKAction.repeatActionForever(spawnSequence)
+        let completeSequence:SKAction = SKAction.sequence([firstDelay, foreverSpawn])
+        
+        self.runAction(completeSequence, withKey: "Spawn")
+    }
     
+    func stopSpawning() {
+        self.removeActionForKey("Spawn")
+        
+        worldNode.enumerateChildNodesWithName("TopObstacle", 
+            usingBlock: { (node:SKNode, stop) -> Void in
+                node.removeAllActions()
+        })
+        worldNode.enumerateChildNodesWithName("BottomObstacle", 
+            usingBlock: { (node:SKNode, stop) -> Void in
+                node.removeAllActions()
+        })
+    }
     
     override func update(currentTime: NSTimeInterval) {
         // Step 12: Calculate the deltaTick and update tiles
@@ -183,6 +266,7 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
         
         lastUpdatedTime = currentTime
         
+        // Step 26: Change so that the game stops updating after a hit
         updateForeground(deltaTick)
         updateMidground(deltaTick)
     }
