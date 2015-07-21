@@ -19,6 +19,22 @@ enum Layer:Int {
 }
 
 // Step 20: Collision masks
+struct EntityCategory : OptionSetType, BooleanType {    
+    typealias RawValue = UInt32
+    private var value: UInt32 = 0
+    init(_ value: UInt32) { self.value = value }
+    var boolValue: Bool { return self.value != 0 }
+    init(rawValue value: UInt32) { self.value = value }
+    init(nilLiteral: ()) { self.value = 0 }
+    static var allZeros: EntityCategory { return self.init(0) }
+    static func fromMask(raw: UInt32) -> EntityCategory { return self.init(raw) }
+    var rawValue: UInt32 { return self.value }
+    
+    static var None: EntityCategory         { return self.init(0) }
+    static var Player: EntityCategory       { return self.init(1 << 0) }
+    static var Obstacle: EntityCategory     { return self.init(1 << 1) }
+    static var Ground: EntityCategory       { return self.init(1 << 2) }
+} 
 
 // Helper function
 func randomFloatRange(min:CGFloat, max:CGFloat) -> CGFloat {
@@ -63,13 +79,22 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
     let kSpawnDelay:Double = 1.5
     
     // Step 19: Physics variables
+    var hitObstacle:Bool = false
+    
+    // Gameplay - Player movement
+    let kGravity:CGFloat = -1300.0
+    let kImpulse:CGFloat = 400
+    var playerVelocity : CGPoint = CGPoint(x: 0, y: 0)
+    
+    // Step 29: Ghost variables
     
     
     override init(size: CGSize) {        
         super.init(size:size)
         
         // Step 21: Physics world
-        
+        self.physicsWorld.contactDelegate = self;
+        self.physicsWorld.gravity = CGVectorMake(0, 0)
         
         // Step 5: Add the root note to the scene
         self.addChild(worldNode)
@@ -99,6 +124,15 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
         playableHeight = background.size.height
         
         // Step 23: Add ground physics
+        let lowerLeft:CGPoint = CGPoint(x: 0, y: playableStart)
+        let lowerRight:CGPoint = CGPoint(x: self.size.width, y: playableStart)
+        
+        self.physicsBody = SKPhysicsBody(edgeFromPoint: lowerLeft, toPoint: lowerRight)
+        //self.attachDebugLineFromPoint(lowerLeft, to: lowerRight, color: UIColor.redColor())
+        
+        self.physicsBody!.categoryBitMask = EntityCategory.Ground.rawValue
+        self.physicsBody!.collisionBitMask = 0
+        self.physicsBody!.contactTestBitMask = EntityCategory.Player.rawValue
     }
     
     // Step 7: Setup foreground and midground
@@ -166,6 +200,27 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
         worldNode.addChild(player!)
         
         // Step 22: Add player physics
+        let offsetX:CGFloat = player!.size.width * player!.anchorPoint.x
+        let offsetY:CGFloat = player!.size.height * player!.anchorPoint.y
+        
+        let path:CGMutablePathRef = CGPathCreateMutable()
+        CGPathMoveToPoint(path, nil, 3-offsetX, 10-offsetY)
+        CGPathAddLineToPoint(path, nil, 17-offsetX, 23-offsetY)
+        CGPathAddLineToPoint(path, nil, 34-offsetX, 28-offsetY)
+        CGPathAddLineToPoint(path, nil, 39-offsetX, 16-offsetY)
+        CGPathAddLineToPoint(path, nil, 33-offsetX, 4-offsetY)
+        CGPathAddLineToPoint(path, nil, 18-offsetX, 1-offsetY)
+        CGPathAddLineToPoint(path, nil, 6-offsetX, 1-offsetY)
+        CGPathCloseSubpath(path)
+        
+        player!.physicsBody = SKPhysicsBody(polygonFromPath: path)
+        //player!.attachDebugFrameFromPath(path, color: SKColor.redColor())
+        player!.physicsBody!.categoryBitMask = EntityCategory.Player.rawValue
+        
+        var playerContact:EntityCategory = [EntityCategory.Obstacle, EntityCategory.Ground]
+        player!.physicsBody!.collisionBitMask = 0
+        player!.physicsBody!.contactTestBitMask = playerContact.rawValue
+        player!.physicsBody!.dynamic = true
         
         setupPlayerAnimations()
     }
@@ -191,12 +246,44 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
         obstacle.zPosition = Layer.LayerObstacle.floatValue()
         
         // Step 24: Add obstacle phyics
+        let offsetX:CGFloat = obstacle.size.width * obstacle.anchorPoint.x
+        let offsetY:CGFloat = obstacle.size.height * obstacle.anchorPoint.y
         
+        let path:CGMutablePathRef = CGPathCreateMutable()
+        CGPathMoveToPoint(path, nil, 4-offsetX, 309-offsetY)
+        CGPathAddLineToPoint(path, nil, 16-offsetX, 315-offsetY)
+        CGPathAddLineToPoint(path, nil, 40-offsetX, 315-offsetY)
+        CGPathAddLineToPoint(path, nil, 52-offsetX, 305-offsetY)
+        CGPathAddLineToPoint(path, nil, 50-offsetX, 1-offsetY)
+        CGPathAddLineToPoint(path, nil, 3-offsetX, 1-offsetY)
+        CGPathCloseSubpath(path)
+        
+        obstacle.physicsBody = SKPhysicsBody(polygonFromPath: path)
+        //obstacle.attachDebugFrameFromPath(path, color: SKColor.redColor())
+        obstacle.physicsBody!.categoryBitMask = EntityCategory.Obstacle.rawValue
+        obstacle.physicsBody!.collisionBitMask = 0
+        obstacle.physicsBody!.contactTestBitMask = EntityCategory.Player.rawValue
+        
+        obstacle.userData = NSMutableDictionary()
         
         return obstacle
     }
     
     // Step 25: Add begin contact
+    func didBeginContact(contact: SKPhysicsContact) {
+        let other:SKPhysicsBody = (contact.bodyA.categoryBitMask == EntityCategory.Player.rawValue ? contact.bodyB : contact.bodyA)
+        
+        if (other.categoryBitMask == EntityCategory.Ground.rawValue) {
+            hitObstacle = true
+            stopSpawning()
+            return
+        }
+        if (other.categoryBitMask == EntityCategory.Obstacle.rawValue) {
+            hitObstacle = true
+            stopSpawning()
+            return
+        }
+    }
     
     // Step 17: Spawn complete obstacle
     func spawnObstacle() {
@@ -257,6 +344,16 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
         })
     }
     
+    // Step 27: Update the player
+    
+    // Step 28: Handle player input
+    
+    // Step 30: Create the ghost
+    
+    // Step 31: Spawn the ghost
+    
+    // Step 32: Update the ghost
+    
     override func update(currentTime: NSTimeInterval) {
         // Step 12: Calculate the deltaTick and update tiles
         var deltaTick:CGFloat = 0
@@ -267,7 +364,10 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
         lastUpdatedTime = currentTime
         
         // Step 26: Change so that the game stops updating after a hit
-        updateForeground(deltaTick)
-        updateMidground(deltaTick)
+        // Step 33: Change to final update
+        if (!hitObstacle) {
+            updateForeground(deltaTick)
+            updateMidground(deltaTick)
+        }
     }
 }
