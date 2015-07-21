@@ -34,9 +34,20 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
     
     // Step 8: Add the playableStart variable
     var playableStart:CGFloat = 0
+    var playableHeight : CGFloat = 0.0
     
     // Step 9: Add gameplay constants
+    var lastUpdatedTime:NSTimeInterval = 0
     
+    // Gameplay - Foreground moving
+    let kNumForegrounds:Int = 2
+    let kForegroundSpeed:CGFloat = 150;
+    
+    // Gameplay - Midground moving
+    let kNumMidgrounds:Int = 2
+    let kMidgroundSpeedModifier:CGFloat = 0.5
+    
+    // Step 13: Create player variables
     
     override init(size: CGSize) {        
         super.init(size:size)
@@ -63,33 +74,79 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
         
         // Step 9: Move the foreground to the correct position
         playableStart = self.size.height - background.size.height
+        playableHeight = background.size.height
     }
     
     // Step 7: Setup foreground and midground
     // Step 10: Modify midground and foreground to include some tiles
     func setupMidground() {
-        let midground = SKSpriteNode(imageNamed: "Midground")
-        midground.anchorPoint = CGPoint(x: 0, y: 1)
-        midground.position = CGPoint(x: 0, y: self.size.height)
-        midground.zPosition = Layer.LayerMidground.floatValue()
-        midground.name = "Midground"
-        worldNode.addChild(midground)
+        for (var i:Int = 0; i < kNumMidgrounds; ++i) {
+            let midground = SKSpriteNode(imageNamed: "Midground")
+            midground.anchorPoint = CGPoint(x: 0, y: 1)
+            midground.position = CGPoint(x: (CGFloat(i) * midground.size.width), y: self.size.height)
+            midground.zPosition = Layer.LayerMidground.floatValue()
+            midground.name = "Midground"
+            worldNode.addChild(midground)
+        }
     }
     
     func setupForeground() {
-        let foreground = SKSpriteNode(imageNamed: "Ground")
-        foreground.anchorPoint = CGPoint(x: 0, y: 1)
-        foreground.position = CGPoint(x: 0, y: playableStart)
-        foreground.zPosition = Layer.LayerForeground.floatValue()
-        foreground.name = "Foreground"
-        worldNode.addChild(foreground)
+        for (var i:Int = 0; i < kNumForegrounds; ++i) {
+            let foreground = SKSpriteNode(imageNamed: "Ground")
+            foreground.anchorPoint = CGPoint(x: 0, y: 1)
+            foreground.position = CGPoint(x: (CGFloat(i) * foreground.size.width), y: playableStart)
+            foreground.zPosition = Layer.LayerForeground.floatValue()
+            foreground.name = "Foreground"
+            worldNode.addChild(foreground)
+        }
     }
     
     // Step 11: Update the foreground and midground
+    func updateForeground(deltaTick:CGFloat) {
+        let moveAmount = CGPoint(x: -kForegroundSpeed * deltaTick, y: 0)
+        
+        worldNode.enumerateChildNodesWithName("Foreground", 
+            usingBlock: { (node:SKNode, stop) -> Void in
+                let foreground:SKSpriteNode = node as! SKSpriteNode
+                foreground.position.x += moveAmount.x
+                foreground.position.y += moveAmount.y
+                
+                if (foreground.position.x < -foreground.size.width) {
+                    let shiftDistance:CGFloat = foreground.size.width * CGFloat(self.kNumForegrounds)
+                    foreground.position.x += shiftDistance
+                }
+        })
+    }
+    
+    func updateMidground(deltatick:CGFloat) {
+        let moveAmount = CGPoint(x: -kForegroundSpeed * kMidgroundSpeedModifier * deltatick, y: 0)
+        
+        worldNode.enumerateChildNodesWithName("Midground", 
+            usingBlock: { (node:SKNode, stop) -> Void in
+                let midground:SKSpriteNode = node as! SKSpriteNode
+                midground.position.x += moveAmount.x
+                midground.position.y += moveAmount.y
+                
+                if (midground.position.x < -midground.size.width) {
+                    let shiftDistance:CGFloat = midground.size.width * CGFloat(self.kNumMidgrounds)
+                    midground.position.x += shiftDistance
+                }
+        })
+    }
+    
+    // Step 14: Create the player
     
     
     override func update(currentTime: NSTimeInterval) {
         // Step 12: Calculate the deltaTick and update tiles
+        var deltaTick:CGFloat = 0
+        if (lastUpdatedTime != 0) {
+            deltaTick = CGFloat(currentTime - lastUpdatedTime)
+        }
         
+        lastUpdatedTime = currentTime
+        
+        updateForeground(deltaTick)
+        updateMidground(deltaTick)
     }
 }
