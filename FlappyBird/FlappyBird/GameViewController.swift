@@ -31,23 +31,15 @@ extension SKNode {
     }
 }
 
-class GameViewController: UIViewController, GameSceneDelegate {
+class GameViewController: UIViewController {
     
     var backgroundMusicPlayer : AVAudioPlayer = AVAudioPlayer()
 
     override func viewDidLoad() {
         super.viewDidLoad()
         
-        let skView = self.view as! SKView
-        //skView.showsFPS = true
-        //skView.showsNodeCount = true
+        // Step 1 - Add a SpriteKit view to the scene
         
-        let scene = GameScene(size: skView.bounds.size, delegate:self, state:GameState.MainMenu)
-        scene.scaleMode = .AspectFill
-
-        skView.presentScene(scene)
-        
-        setupBackgroundMusic()
     }
 
     override func shouldAutorotate() -> Bool {
@@ -69,40 +61,5 @@ class GameViewController: UIViewController, GameSceneDelegate {
 
     override func prefersStatusBarHidden() -> Bool {
         return true
-    }
-
-    func screenShot() -> UIImage {
-        UIGraphicsBeginImageContextWithOptions(self.view.bounds.size, false, 1.0)
-        self.view.drawViewHierarchyInRect(self.view.bounds, afterScreenUpdates: true)
-        let image:UIImage = UIGraphicsGetImageFromCurrentImageContext()
-        UIGraphicsEndImageContext()
-        
-        return image
-    }
-    
-    func share(string: String, url: NSURL, image: UIImage) {
-        let activity:UIActivityViewController = UIActivityViewController(activityItems: [string, url, image], applicationActivities: nil)
-        self.presentViewController(activity, animated: true, completion: nil)
-    }
-
-    func setupBackgroundMusic() {
-        // Load the resource
-        let musicURL = NSBundle.mainBundle().URLForResource("music", withExtension: "mp3")
-        
-        // Initialise the AVAudioPlayer with the resource's URL
-        var error : NSError?        
-        do {
-            backgroundMusicPlayer = try AVAudioPlayer(contentsOfURL: musicURL!)
-        } catch let error1 as NSError {
-            error = error1
-        }
-        
-        // Set the file to loop and get it ready for play
-        backgroundMusicPlayer.numberOfLoops = -1
-        backgroundMusicPlayer.volume = 1
-        backgroundMusicPlayer.prepareToPlay()
-        
-        // Play the background music
-        backgroundMusicPlayer.play()
     }
 }
