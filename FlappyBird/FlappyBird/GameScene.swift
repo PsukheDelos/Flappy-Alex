@@ -87,7 +87,9 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
     var playerVelocity : CGPoint = CGPoint(x: 0, y: 0)
     
     // Step 29: Ghost variables
-    
+    // Gameplay - Ghost
+    var ghost:SKSpriteNode?
+    let kGhostSpeed:CGFloat = 200
     
     override init(size: CGSize) {        
         super.init(size:size)
@@ -345,14 +347,87 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
     }
     
     // Step 27: Update the player
+    func updatePlayer(deltaTick:CGFloat) {
+        // Apply gravity
+        let gravity = CGPoint(x: 0, y: kGravity)
+        playerVelocity.x += (gravity.x * deltaTick)
+        playerVelocity.y += (gravity.y * deltaTick)
+        
+        // Apply velocity
+        player!.position.x += (playerVelocity.x * deltaTick)
+        player!.position.y += (playerVelocity.y * deltaTick)
+        
+        // Recorrect the top position
+        if (player!.position.y > (self.size.height - player!.size.height / 2.0)) {
+            player!.position.y = self.size.height - player!.size.height / 2.0
+        }
+    }
     
     // Step 28: Handle player input
+    override func touchesBegan(touches: Set<UITouch>, withEvent event: UIEvent?) {
+        if (!hitObstacle) {
+            playerVelocity = CGPoint(x: 0, y: kImpulse)
+        }
+    }
     
     // Step 30: Create the ghost
+    func setupGhost() {
+        ghost = SKSpriteNode(imageNamed: "Death0")
+        ghost!.position = player!.position
+        ghost!.zPosition = Layer.LayerPlayer.floatValue()
+        worldNode.addChild(ghost!)
+        
+        // Death animation
+        var deathTextures = Array<SKTexture>()
+        for (var i:Int = 0; i < 2; ++i) {
+            deathTextures.append(SKTexture(imageNamed: String("Death"+String(i))))
+        }
+        
+        for (var i:Int = 1; i >= 0; --i) {
+            deathTextures.append(SKTexture(imageNamed: String("Death"+String(i))))
+        }
+        
+        let deathAnimation:SKAction = SKAction.animateWithTextures(deathTextures as [SKTexture], timePerFrame: 0.075)
+        ghost!.runAction(SKAction.repeatActionForever(deathAnimation))
+        
+        
+        if (player!.parent != nil) {
+            player!.removeFromParent()
+        }
+    }
     
     // Step 31: Spawn the ghost
+    func switchToFalling() {
+        
+        setupGhost()
+        
+        // Flash white
+        let flash:SKSpriteNode = SKSpriteNode(color: SKColor.whiteColor(), size: self.size)
+        flash.position = CGPoint(x: self.size.width * 0.5, y: self.size.height * 0.5)
+        flash.zPosition = Layer.LayerFlash.floatValue()
+        worldNode.addChild(flash)
+        flash.runAction(SKAction.sequence([
+            SKAction.waitForDuration(0.01),
+            SKAction.removeFromParent()
+            ]))
+        
+        player!.removeAllActions()
+    }
+    
+    func checkHitObstacle() {
+        if (hitObstacle) {
+            self.switchToFalling()
+        }
+    }
     
     // Step 32: Update the ghost
+    func updateGhost(deltaTick:CGFloat) {
+        if let thisGhost = ghost {
+            playerVelocity.y = kGhostSpeed;
+            
+            thisGhost.position.y += (playerVelocity.y * deltaTick)
+        }
+    }
     
     override func update(currentTime: NSTimeInterval) {
         // Step 12: Calculate the deltaTick and update tiles
@@ -365,9 +440,14 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
         
         // Step 26: Change so that the game stops updating after a hit
         // Step 33: Change to final update
-        if (!hitObstacle) {
+        if let _ = ghost {
+            updateGhost(deltaTick)
+        }
+        else {
             updateForeground(deltaTick)
             updateMidground(deltaTick)
+            updatePlayer(deltaTick)
+            checkHitObstacle()
         }
     }
 }
