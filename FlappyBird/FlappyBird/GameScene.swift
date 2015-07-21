@@ -33,6 +33,10 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
     var worldNode:SKNode = SKNode()
     
     // Step 8: Add the playableStart variable
+    var playableStart:CGFloat = 0
+    
+    // Step 9: Add gameplay constants
+    
     
     override init(size: CGSize) {        
         super.init(size:size)
@@ -41,6 +45,8 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
         self.addChild(worldNode)
         
         setupBackground()
+        setupMidground()
+        setupForeground()
     }
 
     required init(coder aDecoder: NSCoder) {
@@ -56,13 +62,34 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
         worldNode.addChild(background)
         
         // Step 9: Move the foreground to the correct position
-        
+        playableStart = self.size.height - background.size.height
     }
     
     // Step 7: Setup foreground and midground
-        
+    // Step 10: Modify midground and foreground to include some tiles
+    func setupMidground() {
+        let midground = SKSpriteNode(imageNamed: "Midground")
+        midground.anchorPoint = CGPoint(x: 0, y: 1)
+        midground.position = CGPoint(x: 0, y: self.size.height)
+        midground.zPosition = Layer.LayerMidground.floatValue()
+        midground.name = "Midground"
+        worldNode.addChild(midground)
+    }
+    
+    func setupForeground() {
+        let foreground = SKSpriteNode(imageNamed: "Ground")
+        foreground.anchorPoint = CGPoint(x: 0, y: 1)
+        foreground.position = CGPoint(x: 0, y: playableStart)
+        foreground.zPosition = Layer.LayerForeground.floatValue()
+        foreground.name = "Foreground"
+        worldNode.addChild(foreground)
+    }
+    
+    // Step 11: Update the foreground and midground
+    
     
     override func update(currentTime: NSTimeInterval) {
+        // Step 12: Calculate the deltaTick and update tiles
         
     }
 }
