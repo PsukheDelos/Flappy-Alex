@@ -48,6 +48,10 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
     let kMidgroundSpeedModifier:CGFloat = 0.5
     
     // Step 13: Create player variables
+    var player:SKSpriteNode?
+    
+    // Step 15: Create obstacle variables
+    
     
     override init(size: CGSize) {        
         super.init(size:size)
@@ -58,6 +62,8 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
         setupBackground()
         setupMidground()
         setupForeground()
+        setupPlayer()
+        
     }
 
     required init(coder aDecoder: NSCoder) {
@@ -135,6 +141,37 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
     }
     
     // Step 14: Create the player
+    func setupPlayer() {
+        player = SKSpriteNode(imageNamed: "Bird0")
+        player!.position = CGPoint(x: self.size.width * 0.2, y: playableHeight * 0.4 + playableStart)
+        player!.zPosition = Layer.LayerPlayer.floatValue()
+        worldNode.addChild(player!)
+        
+        setupPlayerAnimations()
+    }
+    
+    func setupPlayerAnimations() {
+        // Fly animation
+        var flyTextures = Array<SKTexture>()
+        for (var i:Int = 0; i < 4; ++i) {
+            flyTextures.append(SKTexture(imageNamed: String("Bird"+String(i))))
+        }
+        
+        for (var i:Int = 2; i >= 0; --i) {
+            flyTextures.append(SKTexture(imageNamed: String("Bird"+String(i))))
+        }
+        
+        let flyAnimation:SKAction = SKAction.animateWithTextures(flyTextures as [SKTexture], timePerFrame: 0.07)
+        player!.runAction(SKAction.repeatActionForever(flyAnimation))
+    }
+    
+    // Step 16: Create single obstacle
+    
+    
+    // Step 17: Spawn complete obstacle
+    
+    
+    // Step 18: Handle spawning intervals
     
     
     override func update(currentTime: NSTimeInterval) {
