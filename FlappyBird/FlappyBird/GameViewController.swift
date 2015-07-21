@@ -39,7 +39,13 @@ class GameViewController: UIViewController {
         super.viewDidLoad()
         
         // Step 1 - Add a SpriteKit view to the scene
+        let skView = self.view as! SKView
         
+        let scene = GameScene(size: skView.bounds.size)
+        scene.scaleMode = .AspectFill
+        scene.backgroundColor = SKColor.purpleColor()
+        
+        skView.presentScene(scene)
     }
 
     override func shouldAutorotate() -> Bool {
